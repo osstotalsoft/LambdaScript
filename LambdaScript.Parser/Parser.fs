@@ -111,8 +111,8 @@ do lambdaStatementParserRef.Value <- choice [
 ]
 
 let lambdaScriptParser: Parser<LambdaScript, unit> = choice [
-    lambdaExprParser |>> Expression
     lambdaStatementParser |>> Statement  
+    lambdaExprParser |>> Expression
 ]
 
 
@@ -129,7 +129,7 @@ let parseLambdaStatement s =
         | Failure(f, _, _) -> f |> Result.Error
 
 let parseLambdaScript s = 
-    let result = run lambdaExprParser s
+    let result = run lambdaScriptParser s
     match result with
         | Success(s,_,_) -> s |> Result.Ok
         | Failure(f, _, _) -> f |> Result.Error

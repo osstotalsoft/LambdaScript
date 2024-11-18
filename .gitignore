@@ -5,3 +5,11 @@
 /.vs
 /LambdaScript.Parser/bin
 /LambdaScript.Parser/obj
+/LambdaScript.ClassLibrary/bin/Debug/net9.0
+/LambdaScript.ClassLibrary/obj
+/LambdaScript.Compiler/bin/Debug/net9.0
+/LambdaScript.Compiler/obj
+/LambdaScript.Runtime/bin/Debug/net9.0
+/LambdaScript.Runtime/obj
+/LambdaScript.Tests/bin/Debug/net9.0
+/LambdaScript.Tests/obj

@@ -2,22 +2,62 @@
 #load "Parser.fs"
 open LambdaScript.Parser
 
-let showExpr s = sprintf "%s  ------> %A" s (parseLambdaExpr s)// |> printfn "%s"
-let showStatement s = sprintf "%s  ------> %A" s (parseLambdaStatement s) //|> printfn "%s"
 let showScript s = sprintf "%s  ------> %A" s (parseLambdaScript s) //|> printfn "%s"
 
-"InstallmentNo == @ActualCurrentRate & ServiceCode == \"CASCO_A\"" |> showExpr
-"InstallmentNo == (10 & ServiceCode == \"CASCO_A\")" |> showExpr
-"(InstallmentNo == 10 & ServiceCode == \"CASCO_A\")" |> showExpr
-"InstallmentNo == 10 & ServiceCode == \"CASCO_A\"" |> showExpr
-"InstallmentNo & 10" |> showExpr
-"InstallmentNo == 10" |> showExpr
-"InstallmentNo" |> showExpr
-"10" |> showExpr
-"\"10\"" |> showExpr
-"5 % 4" |> showExpr
-"!IsActive" |> showExpr
+"InstallmentNo == @ActualCurrentRate & ServiceCode == \"CASCO_A\"" |> showScript
+"InstallmentNo == (10 & ServiceCode == \"CASCO_A\")" |> showScript
+"(InstallmentNo == 10 & ServiceCode == \"CASCO_A\")" |> showScript
+"InstallmentNo == 10 & ServiceCode == \"CASCO_A\"" |> showScript
+"InstallmentNo & 10" |> showScript
+"InstallmentNo == 10" |> showScript
+"InstallmentNo" |> showScript
+"10" |> showScript
+"\"10\"" |> showScript
+"5 % 4" |> showScript
+"!IsActive" |> showScript
+"Document.ServiceGenerationParams" |> showScript
+"Document.Detail.Id" |> showScript
 
-"@InstallmentNo = 10" |> showStatement
 
-"@InstallmentNo = 10" |> showScript
+"SET(@InstallmentNo, 10)" |> showScript
+"SET(@InstallmentNo, 10);" |> showScript
+"SET(@InstallmentNo, 10);SET(@XY, 1);" |> showScript
+
+"""
+SET(@Unu, 1);
+SET(@TipRata, 4);
+SET(@ActualCurrentRate, 10);
+SET(@ActualPeriodInterest, 1);
+""" |> showScript
+
+"""
+{
+    SET(@Unu, 1);
+    SET(@TipRata, 4);
+    SET(@ActualCurrentRate, 10);
+    SET(@ActualPeriodInterest, 1);
+}
+""" |> showScript
+
+"""
+if(@TerminationServicePeriod > 0)
+{
+    SET(@Unu, 1);
+    SET(@TipRata, 4);
+    SET(@ActualCurrentRate, 10);
+    SET(@ActualPeriodInterest, 1);
+}
+""" |> showScript
+
+"""
+if(@TerminationServicePeriod > 0)
+{
+    SET(@Unu, 1);
+    SET(@TipRata, 4);
+}
+else{
+    SET(@ActualCurrentRate, 10);
+    SET(@ActualPeriodInterest, 1);
+}
+""" |> showScript
+    

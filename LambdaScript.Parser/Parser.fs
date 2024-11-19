@@ -14,6 +14,7 @@ and LambdaExpr =
     | Number of N:decimal
     | String of S:string
     | PropertyAccessor of Expr:LambdaExpr * PropertyName:string
+    | FunctionCall of FnName:string * Args:LambdaExpr list
     | Identifier of Id: string
     | UnaryOp of Op:(UnaryOperator * LambdaExpr)
     | BinaryOp of Op:(LambdaExpr * BinaryOperator * LambdaExpr)
@@ -34,9 +35,9 @@ and BinaryOperator =
     | Divide
     | Mod
 
-type LambdaExprParserState = unit
-type LambdaExprParser<'a> = Parser<'a, LambdaExprParserState>
-type LambdaExprParser = LambdaExprParser<LambdaExpr>
+type LambdaScriptParserState = unit
+type LambdaScriptParser<'a> = Parser<'a, LambdaScriptParserState>
+type LambdaScriptParser = LambdaScriptParser<LambdaScript>
 
 module Internal =
     type Assoc = Associativity
@@ -52,9 +53,10 @@ module Internal =
 
     let betweenQuotes = between (ignore_ws_str "\"") (ignore_ws_str "\"")
     let betweenParens = between (ignore_ws_str "(") (ignore_ws_str ")")
+    let betweenParens2 = between (ignore_ws_str "(") (ignore_ws_str ")")
     let notQuoteChar = noneOf (Seq.toList "\"")
     let unquotedString = manyChars notQuoteChar
-    let stringParser: LambdaExprParser = betweenQuotes unquotedString |>> String <?> "string"
+    let stringParser = betweenQuotes unquotedString |>> String <?> "string"
 
     let identifierParser = 
         parse {
@@ -81,15 +83,33 @@ module Internal =
         }
         <?> "identifier and or property accessor"
 
-    let termParser = choice [
+    let termParser, termParserRef = createParserForwardedToRef<LambdaExpr, Unit>()
+
+    let functionCallParser = 
+        parse {
+            let! fnName = parse {
+                let! first = letter <|> underscore
+                let! rest = manyChars (letter <|> underscore <|> digit)
+                return first.ToString() + rest
+            }
+
+            let! args = betweenParens (sepBy termParser (ignore_ws_str ","))
+            return FunctionCall (fnName, args)
+        }
+        <?> "function call"
+
+    termParserRef.Value <- choice [
         stringParser
         numericParser
+        attempt functionCallParser
         chainedPropertyAccessorParser
     ]
 
+    let x = functionCallParser <|> chainedPropertyAccessorParser
+
     let opp = new OperatorPrecedenceParser<LambdaExpr,unit,unit>()
-    let lambdaExprParser = opp.ExpressionParser
-    opp.TermParser <- (termParser .>> ws) <|> betweenParens lambdaExprParser
+    let lambdaExprParser: LambdaScriptParser<LambdaExpr> = opp.ExpressionParser
+    opp.TermParser <- (termParser .>> ws) <|> betweenParens2 lambdaExprParser
 
     opp.AddOperator(PrefixOperator("!", ws, 1, true, fun x -> UnaryOp (Bang, x)))
     opp.AddOperator(InfixOperator("|", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
@@ -110,12 +130,7 @@ module Internal =
 
 
     let lambdaStatementParser, lambdaStatementParserRef = createParserForwardedToRef<LambdaStatement, Unit>()
-    let variableParser: Parser<string, unit> = 
-        parse {
-            let! first = atSign
-            let! rest = manyChars (letter <|> underscore <|> digit)
-            return first.ToString() + rest
-        } <?> "variable"
+   
 
     let blockParser = 
         parse {
@@ -124,6 +139,14 @@ module Internal =
             do! ignore_ws_str "}"
             return Block statements
         }
+
+    let variableParser: Parser<string, unit> = 
+        parse {
+            let! first = atSign
+            let! rest = manyChars (letter <|> underscore <|> digit)
+            return first.ToString() + rest
+        } <?> "variable"
+
     let assignmentParser =
         parse {
             do! ignore_ws_str "SET("
@@ -137,9 +160,9 @@ module Internal =
     let ifParser = 
         parse {
             do! ignore_ws_str "if"
-            let! condition = betweenParens lambdaExprParser .>> spaces
-            let! thenBranch = blockParser .>> spaces
-            let! elseBranch = opt (ignore_ws_str "else" >>. blockParser)
+            let! condition = betweenParens2 lambdaExprParser .>> spaces
+            let! thenBranch = lambdaStatementParser .>> spaces
+            let! elseBranch = opt (ignore_ws_str "else" >>. lambdaStatementParser)
             return If(condition, thenBranch, elseBranch)
         }
 

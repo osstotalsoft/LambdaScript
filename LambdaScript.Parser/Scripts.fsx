@@ -18,10 +18,13 @@ let showScript s = sprintf "%s  ------> %A" s (parseLambdaScript s) //|> printfn
 "Document.ServiceGenerationParams" |> showScript
 "Document.Detail.Id" |> showScript
 
+"ISNULL(@RunningAmount_CASCO_A,0)" |> showScript
+
 
 "SET(@InstallmentNo, 10)" |> showScript
 "SET(@InstallmentNo, 10);" |> showScript
 "SET(@InstallmentNo, 10);SET(@XY, 1);" |> showScript
+"SET(@InstallmentNo, 10) ;;  SET(@XY, 1);" |> showScript
 
 """
 SET(@Unu, 1);
@@ -60,4 +63,13 @@ else{
     SET(@ActualPeriodInterest, 1);
 }
 """ |> showScript
-    
+
+"""
+if(@TerminationServicePeriod > 0)
+    if(@TerminationServicePeriod > 0)
+        SET(@Unu, 1);
+    else
+        SET(@TipRata, 4);
+else
+    SET(@ActualCurrentRate, 10);
+""" |> showScript

@@ -15,6 +15,7 @@ and LambdaExpr =
     | String of S:string
     | PropertyAccessor of Expr:LambdaExpr * PropertyName:string
     | FunctionCall of FnName:string * Args:LambdaExpr list
+    | CollectionFilter of CololectionExpr:LambdaExpr * Predicate:LambdaExpr
     | Identifier of Id: string
     | UnaryOp of Op:(UnaryOperator * LambdaExpr)
     | BinaryOp of Op:(LambdaExpr * BinaryOperator * LambdaExpr)
@@ -43,17 +44,24 @@ module Internal =
     type Assoc = Associativity
 
     let ws = spaces
-    let ignore_ws_str s = pstring s >>. ws
+    let justSpaces  = skipMany  (pchar ' ' <|> pchar '\t')
+    let ignore_ws_str s = pstring s >>. justSpaces
     let str = pstring
     let char = pchar
     let underscore = char '_'
     let atSign = char '@'
 
-    let numericParser = many1Chars digit |>> (System.Decimal.Parse >> Number) <?> "number"
+    let numericParser = 
+        choice [
+            many1Chars digit
+            pstring "-" >>. (many1Chars digit) |>> (fun n -> "-" + n)
+        ]|>> (System.Decimal.Parse >> Number) <?> "number"
 
     let betweenQuotes = between (ignore_ws_str "\"") (ignore_ws_str "\"")
     let betweenParens = between (ignore_ws_str "(") (ignore_ws_str ")")
     let betweenParens2 = between (ignore_ws_str "(") (ignore_ws_str ")")
+    let betweenParens3 = between (ignore_ws_str "(") (ignore_ws_str ")")
+    let betweenBrackets = between (ignore_ws_str "[") (ignore_ws_str "]")
     let notQuoteChar = noneOf (Seq.toList "\"")
     let unquotedString = manyChars notQuoteChar
     let stringParser = betweenQuotes unquotedString |>> String <?> "string"
@@ -71,21 +79,27 @@ module Internal =
             let! _ = pstring "."
             let! first = letter <|> underscore
             let! rest = manyChars (letter <|> underscore <|> digit)
-            return first.ToString() + rest
+            let prop = first.ToString() + rest
+            return (fun expr -> PropertyAccessor (expr, prop))
         }
         <?> "property accessor"
 
-    let chainedPropertyAccessorParser = 
+    let collectionFilterParser expressionParser =  
+        parse {
+            let! predicateExpr = betweenParens3 expressionParser
+            return (fun expr -> CollectionFilter(expr, predicateExpr))
+        } <?> "collection filter"
+
+    let chainedPropertyAccessorParser expressionParser = 
         parse {
             let! identifier = identifierParser
-            let! properties = many propertyAccessorParser
-            return List.fold (fun expr prop -> PropertyAccessor (expr, prop)) identifier properties
+            let! properties = many (propertyAccessorParser <|> collectionFilterParser expressionParser)
+            return List.fold (fun expr fn -> fn expr) identifier properties
         }
-        <?> "identifier and or property accessor"
+        <?> "chained property accessor"
+    
 
-    let termParser, termParserRef = createParserForwardedToRef<LambdaExpr, Unit>()
-
-    let functionCallParser = 
+    let functionCallParser expressionParser = 
         parse {
             let! fnName = parse {
                 let! first = letter <|> underscore
@@ -93,23 +107,23 @@ module Internal =
                 return first.ToString() + rest
             }
 
-            let! args = betweenParens (sepBy termParser (ignore_ws_str ","))
+            let! args = betweenParens2 (sepBy expressionParser (ignore_ws_str ","))
             return FunctionCall (fnName, args)
         }
         <?> "function call"
 
-    termParserRef.Value <- choice [
-        stringParser
-        numericParser
-        attempt functionCallParser
-        chainedPropertyAccessorParser
-    ]
-
-    let x = functionCallParser <|> chainedPropertyAccessorParser
-
     let opp = new OperatorPrecedenceParser<LambdaExpr,unit,unit>()
     let lambdaExprParser: LambdaScriptParser<LambdaExpr> = opp.ExpressionParser
-    opp.TermParser <- (termParser .>> ws) <|> betweenParens2 lambdaExprParser
+
+    let termParser =  choice [
+        stringParser
+        numericParser
+        attempt (functionCallParser lambdaExprParser)
+        chainedPropertyAccessorParser lambdaExprParser
+    ]
+
+
+    opp.TermParser <- (termParser .>> ws) <|> betweenParens lambdaExprParser <|> betweenBrackets termParser
 
     opp.AddOperator(PrefixOperator("!", ws, 1, true, fun x -> UnaryOp (Bang, x)))
     opp.AddOperator(InfixOperator("|", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
@@ -130,15 +144,17 @@ module Internal =
 
 
     let lambdaStatementParser, lambdaStatementParserRef = createParserForwardedToRef<LambdaStatement, Unit>()
+
+    let statementListParser = sepEndBy1 lambdaStatementParser (many1 (pchar ';' <|> newline))
    
 
     let blockParser = 
         parse {
-            do! ignore_ws_str "{"
-            let! statements = sepEndBy1 lambdaStatementParser (many1 (pchar ';') >>. spaces)
-            do! ignore_ws_str "}"
+            do! pstring "{" >>. spaces
+            let! statements = statementListParser .>> spaces
+            do! pstring "}" >>. justSpaces
             return Block statements
-        }
+        } <?> "block statement"
 
     let variableParser: Parser<string, unit> = 
         parse {
@@ -149,47 +165,46 @@ module Internal =
 
     let assignmentParser =
         parse {
-            do! ignore_ws_str "SET("
+            do! pstring "SET" >>. justSpaces .>> pstring "("
             let! variable = variableParser .>> spaces
             do! ignore_ws_str ","
             let! expr = lambdaExprParser .>> spaces
             do! ignore_ws_str ")"
             return Assign(variable, expr)
-        }
+        } <?> "assignment statement"
 
     let ifParser = 
         parse {
             do! ignore_ws_str "if"
-            let! condition = betweenParens2 lambdaExprParser .>> spaces
-            let! thenBranch = lambdaStatementParser .>> spaces
-            let! elseBranch = opt (ignore_ws_str "else" >>. lambdaStatementParser)
+            let! condition = betweenParens lambdaExprParser .>> spaces
+            let! thenBranch = lambdaStatementParser
+            let! x = opt (attempt(spaces .>> pstring "else"))
+            let! elseBranch = x |> function
+                | Some _ -> spaces >>. lambdaStatementParser |>> Some
+                | None -> parse { return None }
             return If(condition, thenBranch, elseBranch)
-        }
+        } <?> "if statement"
 
-    do lambdaStatementParserRef.Value <- choice [
+    let returnParser = 
+        parse {
+            do! ignore_ws_str "return"
+            let! expr = lambdaExprParser
+            return Return expr
+        } <?> "return statement"
+
+    do lambdaStatementParserRef.Value <- justSpaces >>. choice [
         assignmentParser
         blockParser
         ifParser
+        returnParser
     ]
 
-    let lambdaScriptParser: Parser<LambdaScript, unit> = choice [
-        spaces >>. sepEndBy1 lambdaStatementParser (many1 (pchar ';') >>. spaces) |>> StatementList
+    let lambdaScriptParser: Parser<LambdaScript, unit> = spaces >>. choice [
+        statementListParser |>> StatementList
         lambdaExprParser |>> Expression
     ]
 
 open Internal
-
-//let parseLambdaExpr s = 
-//    let result = run lambdaExprParser s
-//    match result with
-//        | Success(s,_,_) -> s |> Result.Ok
-//        | Failure(f, _, _) -> f |> Result.Error
-
-//let parseLambdaStatement s = 
-//    let result = run lambdaStatementParser s
-//    match result with
-//        | Success(s,_,_) -> s |> Result.Ok
-//        | Failure(f, _, _) -> f |> Result.Error
 
 let parseLambdaScript s = 
     let result = run lambdaScriptParser s

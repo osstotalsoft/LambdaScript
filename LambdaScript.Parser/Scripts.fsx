@@ -100,6 +100,11 @@ return 1;
 """ |> showScript
 
 
+
+"""@RemSrvMonthsInPeriod_CASCO_A == 1 ? ISNULL(@MonthFactor_CASCO_A, 0) : 2""" |> showScript
+
+
+
 """
 SET(@Unu, 1);
 SET(@TipRata, 4);

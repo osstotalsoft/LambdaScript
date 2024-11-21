@@ -19,6 +19,7 @@ and LambdaExpr =
     | Identifier of Id: string
     | UnaryOp of Op:(UnaryOperator * LambdaExpr)
     | BinaryOp of Op:(LambdaExpr * BinaryOperator * LambdaExpr)
+    | TernaryOp of Condition:LambdaExpr * Then:LambdaExpr * Else:LambdaExpr
 and UnaryOperator = 
     | Bang
 and BinaryOperator =
@@ -43,8 +44,8 @@ type LambdaScriptParser = LambdaScriptParser<LambdaScript>
 module Internal =
     type Assoc = Associativity
 
-    let ws = spaces
     let justSpaces  = skipMany  (pchar ' ' <|> pchar '\t')
+    let ws = spaces
     let ignore_ws_str s = pstring s >>. justSpaces
     let str = pstring
     let char = pchar
@@ -90,6 +91,15 @@ module Internal =
             return (fun expr -> CollectionFilter(expr, predicateExpr))
         } <?> "collection filter"
 
+    //let ternaryExpressionParser expressionParser = 
+    //   parse {
+    //       do! justSpaces .>> pstring "?" >>. justSpaces
+    //       let! thenExpr = expressionParser
+    //       do! justSpaces .>> pstring ":" >>. justSpaces
+    //       let! elseExpr = expressionParser
+    //       return (fun expr -> TernaryOp(expr, thenExpr, elseExpr))
+    //   } <?> "ternary expression"
+
     let chainedPropertyAccessorParser expressionParser = 
         parse {
             let! identifier = identifierParser
@@ -97,7 +107,7 @@ module Internal =
             return List.fold (fun expr fn -> fn expr) identifier properties
         }
         <?> "chained property accessor"
-    
+
 
     let functionCallParser expressionParser = 
         parse {
@@ -126,6 +136,7 @@ module Internal =
     opp.TermParser <- (termParser .>> ws) <|> betweenParens lambdaExprParser <|> betweenBrackets termParser
 
     opp.AddOperator(PrefixOperator("!", ws, 1, true, fun x -> UnaryOp (Bang, x)))
+    opp.AddOperator(TernaryOperator("?", ws, ":", ws,  1, Assoc.Right, fun x y z -> TernaryOp(x, y, z)));
     opp.AddOperator(InfixOperator("|", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
     opp.AddOperator(InfixOperator("&", ws, 3, Assoc.Left, fun x y -> BinaryOp (x, And, y)))
 

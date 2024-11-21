@@ -55,19 +55,19 @@ public class Compiler
         var e => throw new Exception($"Unknown expression of type {e.GetType()}")
     };
 
-    private static Func<IExecutionContext,T> Compile<T>(string expression)
-    {
-        var predicateOrError = parseLambdaExpr(expression);
-        if (predicateOrError.IsError)
-        {
-            throw new Exception(predicateOrError.ErrorValue);
-        }
+    //private static Func<IExecutionContext,T> Compile<T>(string expression)
+    //{
+    //    var predicateOrError = parseLambdaExpr(expression);
+    //    if (predicateOrError.IsError)
+    //    {
+    //        throw new Exception(predicateOrError.ErrorValue);
+    //    }
 
-        var pred = predicateOrError.ResultValue;
-        var bodyExpr = Expression.Convert(From(pred), typeof(T));
+    //    var pred = predicateOrError.ResultValue;
+    //    var bodyExpr = Expression.Convert(From(pred), typeof(T));
 
-        var expr = Expression.Lambda<Func<IExecutionContext, T>>(bodyExpr, ctx);
-        var predicate = expr.Compile();
-        return predicate;
-    }
+    //    var expr = Expression.Lambda<Func<IExecutionContext, T>>(bodyExpr, ctx);
+    //    var predicate = expr.Compile();
+    //    return predicate;
+    //}
 }

@@ -9,7 +9,7 @@ namespace LambdaScript.Tests
         {
             var script =
             """
-                        SET(@Unu, 1);
+            SET(@Unu, 1);
             SET(@TipRata, 4);
             SET(@ActualCurrentRate, 10);
             SET(@ActualPeriodInterest, 1);

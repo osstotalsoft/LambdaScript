@@ -103,6 +103,10 @@ return 1;
 
 """@RemSrvMonthsInPeriod_CASCO_A == 1 ? ISNULL(@MonthFactor_CASCO_A, 0) : 2""" |> showScript
 
+"""SET(@ServiceType, [Document.ServiceDetail(ServiceCode == "CASCO_A").IsTotalValue])""" |> showScript
+
+"""Document.ServiceDetail(ServiceCode == "CASCO_A").IsTotalValue""" |> showScript
+
 
 
 """

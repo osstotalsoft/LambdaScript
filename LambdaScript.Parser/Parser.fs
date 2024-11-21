@@ -91,15 +91,6 @@ module Internal =
             return (fun expr -> CollectionFilter(expr, predicateExpr))
         } <?> "collection filter"
 
-    //let ternaryExpressionParser expressionParser = 
-    //   parse {
-    //       do! justSpaces .>> pstring "?" >>. justSpaces
-    //       let! thenExpr = expressionParser
-    //       do! justSpaces .>> pstring ":" >>. justSpaces
-    //       let! elseExpr = expressionParser
-    //       return (fun expr -> TernaryOp(expr, thenExpr, elseExpr))
-    //   } <?> "ternary expression"
-
     let chainedPropertyAccessorParser expressionParser = 
         parse {
             let! identifier = identifierParser

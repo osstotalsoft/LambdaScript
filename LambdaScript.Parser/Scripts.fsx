@@ -6,6 +6,8 @@ open FParsec
 
 let showScript s = sprintf "%s  ------> %A" s (parseLambdaScript s) //|> printfn "%s"
 
+"true" |> showScript
+
 "InstallmentNo == @ActualCurrentRate & ServiceCode == \"CASCO_A\"" |> showScript
 "InstallmentNo == (10 & ServiceCode == \"CASCO_A\")" |> showScript
 "(InstallmentNo == 10 & ServiceCode == \"CASCO_A\")" |> showScript

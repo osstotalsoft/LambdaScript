@@ -13,6 +13,7 @@ and LambdaStatement =
 and LambdaExpr =  
     | Number of N:decimal
     | String of S:string
+    | Boolean of B:bool
     | PropertyAccessor of Expr:LambdaExpr * PropertyName:string
     | FunctionCall of FnName:string * Args:LambdaExpr list
     | CollectionFilter of CololectionExpr:LambdaExpr * Predicate:LambdaExpr
@@ -57,6 +58,17 @@ module Internal =
             many1Chars digit
             pstring "-" >>. (many1Chars digit) |>> (fun n -> "-" + n)
         ]|>> (System.Decimal.Parse >> Number) <?> "number"
+
+    //let x = pstring "true" |>> (Boolean true
+
+    let booleanParser = 
+        choice [
+            pstring "true" |>> fun _ -> Boolean true
+            pstring "True" |>> fun _ -> Boolean true
+            pstring "false" |>> fun _ -> Boolean false
+            pstring "False" |>> fun _ -> Boolean false
+
+        ] <?> "boolean"
 
     let betweenQuotes = between (ignore_ws_str "\"") (ignore_ws_str "\"")
     let betweenParens = between (ignore_ws_str "(") (ignore_ws_str ")")
@@ -119,6 +131,7 @@ module Internal =
     let termParser =  choice [
         stringParser
         numericParser
+        booleanParser
         attempt (functionCallParser lambdaExprParser)
         chainedPropertyAccessorParser lambdaExprParser
     ]
@@ -128,8 +141,10 @@ module Internal =
 
     opp.AddOperator(PrefixOperator("!", ws, 1, true, fun x -> UnaryOp (Bang, x)))
     opp.AddOperator(TernaryOperator("?", ws, ":", ws,  1, Assoc.Right, fun x y z -> TernaryOp(x, y, z)));
+    opp.AddOperator(InfixOperator("||", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
     opp.AddOperator(InfixOperator("|", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
     opp.AddOperator(InfixOperator("&", ws, 3, Assoc.Left, fun x y -> BinaryOp (x, And, y)))
+    opp.AddOperator(InfixOperator("&&", ws, 3, Assoc.Left, fun x y -> BinaryOp (x, And, y)))
 
     opp.AddOperator(InfixOperator("==", ws, 4, Assoc.Left, fun x y -> BinaryOp (x, Eq, y)))
     opp.AddOperator(InfixOperator("!=", ws, 4, Assoc.Left, fun x y -> BinaryOp (x, NotEq, y)))

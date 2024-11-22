@@ -139,7 +139,7 @@ module Internal =
 
     opp.TermParser <- (termParser .>> ws) <|> betweenParens lambdaExprParser <|> betweenBrackets termParser
 
-    opp.AddOperator(PrefixOperator("!", ws, 1, true, fun x -> UnaryOp (Bang, x)))
+    opp.AddOperator(PrefixOperator("!", ws, 7, true, fun x -> UnaryOp (Bang, x)))
     opp.AddOperator(TernaryOperator("?", ws, ":", ws,  1, Assoc.Right, fun x y z -> TernaryOp(x, y, z)));
     opp.AddOperator(InfixOperator("||", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
     opp.AddOperator(InfixOperator("|", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))

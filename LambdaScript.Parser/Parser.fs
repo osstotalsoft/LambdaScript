@@ -162,7 +162,7 @@ module Internal =
 
     let lambdaStatementParser, lambdaStatementParserRef = createParserForwardedToRef<LambdaStatement, Unit>()
 
-    let statementListParser = sepEndBy1 lambdaStatementParser (many1 (pchar ';' <|> newline))
+    let statementListParser = sepEndBy1 lambdaStatementParser (many1 (justSpaces >>. (pchar ';' <|> newline) .>> justSpaces))
    
 
     let blockParser = 
@@ -209,12 +209,15 @@ module Internal =
             return Return expr
         } <?> "return statement"
 
-    do lambdaStatementParserRef.Value <- justSpaces >>. choice [
-        assignmentParser
-        blockParser
-        ifParser
-        returnParser
-    ]
+    do lambdaStatementParserRef.Value <- 
+        justSpaces 
+        >>. choice [
+            assignmentParser
+            blockParser
+            ifParser
+            returnParser
+        ] 
+        .>> justSpaces
 
     let lambdaScriptParser: Parser<LambdaScript, unit> = spaces >>. choice [
         statementListParser |>> StatementList

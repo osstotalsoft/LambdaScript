@@ -209,3 +209,21 @@ SET(@Calc_CASCO_A_Principal, 0);
 SET(@RunningAmount_CASCO_A, @RunningAmount_CASCO_A + @Calc_CASCO_A_Principal);
 return @Calc_CASCO_A_Principal;
 """ |> showScript
+
+"if (@a == 2) { SET(@v, 5); return 2 } return @a >= @b;"  |> showScript // ok
+
+"""
+{ 
+    SET(@v, 5)    ;     
+            ;;;;
+            ;;;
+            ;
+            ;;
+            ;;  ; ; ; 
+
+                            return 2;
+
+}
+"""  |> showScript // not ok
+
+"if (@a == 2) { SET(@v, 5); return 2; } return @a >= @b;"  |> showScript // not ok

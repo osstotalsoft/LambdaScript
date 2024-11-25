@@ -52,14 +52,13 @@ module Internal =
     let char = pchar
     let underscore = char '_'
     let atSign = char '@'
+    let doubleAtSign = pstring "@@"
 
     let numericParser = 
         choice [
             many1Chars digit
             pstring "-" >>. (many1Chars digit) |>> (fun n -> "-" + n)
         ]|>> (System.Decimal.Parse >> Number) <?> "number"
-
-    //let x = pstring "true" |>> (Boolean true
 
     let booleanParser = 
         choice [
@@ -81,7 +80,7 @@ module Internal =
 
     let identifierParser = 
         parse {
-            let! first = letter <|> underscore <|> atSign
+            let! first = attempt doubleAtSign <|> (letter <|> underscore <|> atSign |>> string)       
             let! rest = manyChars (letter <|> underscore <|> digit)
             return Identifier <| first.ToString() + rest
         } 
@@ -139,7 +138,7 @@ module Internal =
 
     opp.TermParser <- (termParser .>> ws) <|> betweenParens lambdaExprParser <|> betweenBrackets termParser
 
-    opp.AddOperator(PrefixOperator("!", ws, 1, true, fun x -> UnaryOp (Bang, x)))
+
     opp.AddOperator(TernaryOperator("?", ws, ":", ws,  1, Assoc.Right, fun x y z -> TernaryOp(x, y, z)));
     opp.AddOperator(InfixOperator("||", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
     opp.AddOperator(InfixOperator("|", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
@@ -158,17 +157,18 @@ module Internal =
     opp.AddOperator(InfixOperator("*", ws, 6, Assoc.Left, fun x y -> BinaryOp (x, Mult, y)))
     opp.AddOperator(InfixOperator("/", ws, 6, Assoc.Left, fun x y -> BinaryOp (x, Divide, y)))
     opp.AddOperator(InfixOperator("%", ws, 6, Assoc.Left, fun x y -> BinaryOp (x, Mod, y)))
-
+    
+    opp.AddOperator(PrefixOperator("!", ws, 7, true, fun x -> UnaryOp (Bang, x)))
 
     let lambdaStatementParser, lambdaStatementParserRef = createParserForwardedToRef<LambdaStatement, Unit>()
 
-    let statementListParser = sepEndBy1 lambdaStatementParser (many1 (pchar ';' <|> newline))
-   
+    let statementListParser = sepEndBy1 lambdaStatementParser (many1 (pchar ';' <|> newline))   
 
     let blockParser = 
         parse {
             do! pstring "{" >>. spaces
             let! statements = statementListParser .>> spaces
+            do! optional (pchar ';' .>> spaces)
             do! pstring "}" >>. justSpaces
             return Block statements
         } <?> "block statement"
@@ -182,7 +182,7 @@ module Internal =
 
     let assignmentParser =
         parse {
-            do! pstring "SET" >>. justSpaces .>> pstring "("
+            do! pstring "SET" >>. justSpaces .>> pstring "(" .>> spaces
             let! variable = variableParser .>> spaces
             do! ignore_ws_str ","
             let! expr = lambdaExprParser .>> spaces
@@ -195,6 +195,7 @@ module Internal =
             do! ignore_ws_str "if"
             let! condition = betweenParens lambdaExprParser .>> spaces
             let! thenBranch = lambdaStatementParser
+            do! optional (pchar ';' .>> spaces)
             let! x = opt (attempt(spaces .>> pstring "else"))
             let! elseBranch = x |> function
                 | Some _ -> spaces >>. lambdaStatementParser |>> Some
@@ -209,7 +210,7 @@ module Internal =
             return Return expr
         } <?> "return statement"
 
-    do lambdaStatementParserRef.Value <- justSpaces >>. choice [
+    do lambdaStatementParserRef.Value <- justSpaces >>. choice [        
         assignmentParser
         blockParser
         ifParser

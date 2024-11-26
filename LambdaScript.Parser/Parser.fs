@@ -138,7 +138,7 @@ module Internal =
 
     opp.TermParser <- (termParser .>> ws) <|> betweenParens lambdaExprParser <|> betweenBrackets termParser
 
-
+    opp.AddOperator(PrefixOperator("!", ws, 7, true, fun x -> UnaryOp (Bang, x)))
     opp.AddOperator(TernaryOperator("?", ws, ":", ws,  1, Assoc.Right, fun x y z -> TernaryOp(x, y, z)));
     opp.AddOperator(InfixOperator("||", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
     opp.AddOperator(InfixOperator("|", ws, 2, Assoc.Left, fun x y -> BinaryOp (x, Or, y)))
@@ -158,7 +158,7 @@ module Internal =
     opp.AddOperator(InfixOperator("/", ws, 6, Assoc.Left, fun x y -> BinaryOp (x, Divide, y)))
     opp.AddOperator(InfixOperator("%", ws, 6, Assoc.Left, fun x y -> BinaryOp (x, Mod, y)))
     
-    opp.AddOperator(PrefixOperator("!", ws, 7, true, fun x -> UnaryOp (Bang, x)))
+
 
     let lambdaStatementParser, lambdaStatementParserRef = createParserForwardedToRef<LambdaStatement, Unit>()
 
@@ -168,7 +168,6 @@ module Internal =
         parse {
             do! pstring "{" >>. spaces
             let! statements = statementListParser .>> spaces
-            do! optional (pchar ';' .>> spaces)
             do! pstring "}" >>. justSpaces
             return Block statements
         } <?> "block statement"
@@ -195,7 +194,6 @@ module Internal =
             do! ignore_ws_str "if"
             let! condition = betweenParens lambdaExprParser .>> spaces
             let! thenBranch = lambdaStatementParser
-            do! optional (pchar ';' .>> spaces)
             let! x = opt (attempt(spaces .>> pstring "else"))
             let! elseBranch = x |> function
                 | Some _ -> spaces >>. lambdaStatementParser |>> Some

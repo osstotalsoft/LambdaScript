@@ -1,8 +1,7 @@
-﻿using System.Linq.Expressions;
+﻿using LambdaScript.ClassLibrary;
+using System.Linq.Expressions;
 using System.Reflection;
 using static LambdaScript.Parser;
-using LambdaScript.ClassLibrary;
-using System.Reflection.Metadata;
 
 namespace LambdaScript.Compiler;
 
@@ -55,19 +54,57 @@ public class Compiler
         var e => throw new Exception($"Unknown expression of type {e.GetType()}")
     };
 
-    //private static Func<IExecutionContext,T> Compile<T>(string expression)
-    //{
-    //    var predicateOrError = parseLambdaExpr(expression);
-    //    if (predicateOrError.IsError)
-    //    {
-    //        throw new Exception(predicateOrError.ErrorValue);
-    //    }
+    private static Expression FromStatement(LambdaStatement statement)
+    {
+        return statement switch
+        {
+            LambdaStatement.Block { Item: var statements } => FromStatements(statements),
+            LambdaStatement.Assign { Variable: var variableName, Expr: var exp } => 
+                Expression.Assign(
+                    Expression.Variable(typeof(object), variableName), 
+                    From(exp)
+                ),
+            LambdaStatement.If { Condition: var condition, Then: var thenBranch, Else: var elseBranch } =>
+                Expression.Condition(
+                    From(condition),
+                    FromStatement(thenBranch),
+                    elseBranch == null ? Expression.Empty() : FromStatement(elseBranch.Value)
+                ),
+            LambdaStatement.Return { Item: var exp } => Expression.Convert(From(exp), typeof(object)),
+            _ => throw new Exception($"Unknown statement of type {statement}")
+        };
+    }
 
-    //    var pred = predicateOrError.ResultValue;
-    //    var bodyExpr = Expression.Convert(From(pred), typeof(T));
+    private static Expression FromStatements(IEnumerable<LambdaStatement> statements)
+    {
+        if (statements.Count() == 0)
+            return Expression.Block(Expression.Empty());
 
-    //    var expr = Expression.Lambda<Func<IExecutionContext, T>>(bodyExpr, ctx);
-    //    var predicate = expr.Compile();
-    //    return predicate;
-    //}
+        var expressions = statements.Select(stmt => FromStatement(stmt)).ToList();
+
+        return Expression.Block(expressions);
+    }
+
+    private static Expression FromScript(Parser.LambdaScript script) => script switch
+    {
+        Parser.LambdaScript.Expression { Item: var expression } => From(expression),
+        Parser.LambdaScript.StatementList { Item: var statements } => FromStatements(statements),
+        _ => throw new Exception($"Unknown script of type {script}")
+    };
+
+    private static Func<IExecutionContext, T> Compile<T>(string expression)
+    {
+        var resultOrError = parseLambdaScript(expression);
+        if (resultOrError.IsError)
+        {
+            throw new Exception(resultOrError.ErrorValue);
+        }
+
+        var result = resultOrError.ResultValue;
+        var bodyExpr = Expression.Convert(FromScript(result), typeof(T));
+
+        var expr = Expression.Lambda<Func<IExecutionContext, T>>(bodyExpr, ctx);
+        var predicate = expr.Compile();
+        return predicate;
+    }
 }

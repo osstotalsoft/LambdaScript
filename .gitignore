@@ -13,3 +13,5 @@
 /LambdaScript.Runtime/obj
 /LambdaScript.Tests/bin/Debug/net9.0
 /LambdaScript.Tests/obj
+/LambdaScript.Evaluator/bin/Debug/net9.0
+/LambdaScript.Evaluator/obj

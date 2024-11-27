@@ -28,7 +28,7 @@ public static class ObjAlgebra
         _ => (obj.GetType().GetProperty(prop) ?? throw new Exception($"Property {prop} not found"))?.GetValue(obj),
     };
 
-    public static object Coerce(object value, Type conversionType) =>
+    public static object? Coerce(object value, Type conversionType) =>
         TryChangeType(value, conversionType) switch
         {
             (var result, true) => result,

@@ -1,8 +1,5 @@
 ﻿using FluentAssertions;
 using LambdaScript.Evaluator;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Serialization;
-using System.Linq.Expressions;
-using System.Reflection.Metadata;
 
 namespace LambdaScript.Tests;
 

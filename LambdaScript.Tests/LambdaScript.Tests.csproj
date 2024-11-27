@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LambdaScript.Compiler\LambdaScript.Compiler.csproj" />
+    <ProjectReference Include="..\LambdaScript.Evaluator\LambdaScript.Evaluator.csproj" />
     <ProjectReference Include="..\LambdaScript.Parser\LambdaScript.Parser.fsproj" />
   </ItemGroup>
 

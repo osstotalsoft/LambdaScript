@@ -5,7 +5,7 @@ namespace LambdaScript.Tests
     public class ParserTests
     {
         [Fact]
-        public void Parse_CascoA_Test()
+        public void Parse_CascoA()
         {
             var script =
             """
@@ -107,7 +107,7 @@ namespace LambdaScript.Tests
             return @Calc_CASCO_A_Principal;
             """;
 
-            var r = LambdaScript.Parser.parseLambdaScript(script);
+            var r = Parser.parseLambdaScript(script);
             r.IsOk.Should().BeTrue();
 
         }

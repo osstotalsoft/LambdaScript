@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LambdaScript.Parser\LambdaScript.Parser.fsproj" />
+  </ItemGroup>
+
 </Project>

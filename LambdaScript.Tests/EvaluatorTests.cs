@@ -84,6 +84,33 @@ public class EvaluatorTests
         res.Should().Be(1+2+3);
     }
 
+    [Fact]
+    public void Evaluate_Some_Script_3()
+    {
+        var script =
+        """
+        SET(@TerminationServicePeriod, 0);
+        SET(@ServiceFrom, 0);
+        SET(@ServiceTo, 100);
+        SET(@ActualCurrentRate, 50);
+        if(@TerminationServicePeriod > 0){
+            return 0;
+        }
+        else{
+            if (@ActualCurrentRate < @ServiceFrom | @ActualCurrentRate > @ServiceTo){
+                return 0;
+            }
+            else{
+                return 1;
+            }
+        }
+        """;
+
+        var ctx = new Evaluator.ExecutionContext { Document = new { } };
+        var res = new LambdaEvaluator().Evaluate<int>(script, ctx);
+        res.Should().Be(1);
+    }
+
     //[Fact]
     //public void Test1()
     //{

@@ -85,7 +85,7 @@ public class Compiler
                 => Expression.Assign(cc.GetVariable(variableName), From(exp, cc)),
             LambdaStatement.If { Condition: var condition, Then: var thenBranch, Else: var elseBranch } =>
                 Expression.Condition(
-                    Expression.Convert(From(condition, cc), typeof(bool?)),
+                    Expression.Convert(From(condition, cc), typeof(bool)),
                     FromStatement(thenBranch, cc),
                     elseBranch == null ? Expression.Empty() : FromStatement(elseBranch.Value, cc)
                 ),

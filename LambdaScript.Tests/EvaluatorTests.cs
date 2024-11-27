@@ -50,16 +50,9 @@ public class EvaluatorTests
         res.Should().Be(null);
     }
 
-    [Fact]
-    public void Evaluate_Simple_Script()
-    {
-        var ctx = new Evaluator.ExecutionContext { Document = new { } };
-        var res = new LambdaEvaluator().Evaluate<decimal>("""SET(@Unu, "sdfsdf"); return 0;""", ctx);
-        res.Should().Be(0);
-    }
 
     [Fact]
-    public void Evaluate_Return_Early_Test()
+    public void Evaluate_Early_Return_Test()
     {
         var ctx = new Evaluator.ExecutionContext { Document = new { } };
         var res = new LambdaEvaluator().Evaluate<decimal>("""return 0; return 1;""", ctx);
@@ -67,31 +60,56 @@ public class EvaluatorTests
     }
 
     [Fact]
-    public void Test1()
+    public void Evaluate_Some_Script_1()
     {
-        // Define a parameter expression for the variable 'x'
-        ParameterExpression x = Expression.Parameter(typeof(int), "x");
-
-        // Define a constant expression for the value '5'
-        ConstantExpression value = Expression.Constant(5, typeof(int));
-
-        // Create an assignment expression 'x = 5'
-        BinaryExpression assignExpr = Expression.Assign(x, value);
-
-        // Create a block expression to include the assignment
-        BlockExpression blockExpr = Expression.Block(
-            new[] { x }, // Declare the variable 'x'
-            assignExpr   // Include the assignment expression
-        );
-
-        // Compile the block expression into a lambda and execute it
-        var lambda = Expression.Lambda<Func<int>>(blockExpr).Compile();
-        var result = lambda();
-
-        result.Should().Be(5);
-
-
+        var ctx = new Evaluator.ExecutionContext { Document = new { } };
+        var res = new LambdaEvaluator().Evaluate<decimal>("""SET(@Unu, "sdfsdf"); return 0;""", ctx);
+        res.Should().Be(0);
     }
+
+
+    [Fact]
+    public void Evaluate_Some_Script_2()
+    {
+        var script =
+        """
+            SET(@a, 1);
+            SET(@b, 2);
+            SET(@c, 3);
+            return @a + @b + @c;
+        """;
+
+        var ctx = new Evaluator.ExecutionContext { Document = new { } };
+        var res = new LambdaEvaluator().Evaluate<decimal>(script, ctx);
+        res.Should().Be(1+2+3);
+    }
+
+    //[Fact]
+    //public void Test1()
+    //{
+    //    // Define a parameter expression for the variable 'x'
+    //    ParameterExpression x = Expression.Parameter(typeof(int), "x");
+
+    //    // Define a constant expression for the value '5'
+    //    ConstantExpression value = Expression.Constant(5, typeof(int));
+
+    //    // Create an assignment expression 'x = 5'
+    //    BinaryExpression assignExpr = Expression.Assign(x, value);
+
+    //    // Create a block expression to include the assignment
+    //    BlockExpression blockExpr = Expression.Block(
+    //        new[] { x }, // Declare the variable 'x'
+    //        assignExpr   // Include the assignment expression
+    //    );
+
+    //    // Compile the block expression into a lambda and execute it
+    //    var lambda = Expression.Lambda<Func<int>>(blockExpr).Compile();
+    //    var result = lambda();
+
+    //    result.Should().Be(5);
+
+
+    //}
 
 
 }

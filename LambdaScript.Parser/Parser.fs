@@ -52,7 +52,6 @@ module Internal =
     let char = pchar
     let underscore = char '_'
     let atSign = char '@'
-    let doubleAtSign = pstring "@@"
 
     let numericParser = 
         choice [
@@ -80,9 +79,13 @@ module Internal =
 
     let identifierParser = 
         parse {
-            let! first = attempt doubleAtSign <|> (letter <|> underscore <|> atSign |>> string)       
+            let! first = choice [
+                many1Chars (atSign)
+                letter |>> string
+                underscore |>> string
+            ]        
             let! rest = manyChars (letter <|> underscore <|> digit)
-            return Identifier <| first.ToString() + rest
+            return Identifier <| first + rest
         } 
         <?> "identifier"
 

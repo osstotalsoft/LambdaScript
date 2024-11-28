@@ -162,7 +162,8 @@ module Internal =
 
     let lambdaStatementParser, lambdaStatementParserRef = createParserForwardedToRef<LambdaStatement, Unit>()
 
-    let statementListParser = sepEndBy1 lambdaStatementParser (many1 (justSpaces >>. (pchar ';' <|> newline) .>> justSpaces))
+    let statementSeparator = justSpaces >>. (pchar ';' <|> newline) .>> justSpaces
+    let statementListParser = sepEndBy1 lambdaStatementParser (many1 statementSeparator)
    
 
     let blockParser = 
@@ -194,7 +195,7 @@ module Internal =
         parse {
             do! ignore_ws_str "if"
             let! condition = betweenParens lambdaExprParser .>> spaces
-            let! thenBranch = lambdaStatementParser
+            let! thenBranch = lambdaStatementParser .>> many statementSeparator
             let! x = opt (attempt(spaces .>> pstring "else"))
             let! elseBranch = x |> function
                 | Some _ -> spaces >>. lambdaStatementParser |>> Some

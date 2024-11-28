@@ -33,6 +33,28 @@ namespace LambdaScript.Tests
         }
 
         [Fact]
+        public void Parse_IfThenElse_2()
+        {
+            var script =
+            """
+            if (@ActualCurrentRate < @ServiceFrom | @ActualCurrentRate > @ServiceTo) return 0 else return 1
+            """;
+
+            var r = Parser.parseLambdaScript(script);
+            var elseBranch = r.IsOk && r.ResultValue switch
+            {
+                Parser.LambdaScript.StatementList { Item: var statements } => statements.ToList() switch
+                {
+                [LambdaStatement.If { Else: var elseB }] when FSharpOption<LambdaStatement>.get_IsSome(elseB) => true,
+                    _ => false
+                },
+                _ => false
+            };
+
+            elseBranch.Should().BeTrue();
+        }
+
+        [Fact]
         public void Parse_CascoA()
         {
             var script =

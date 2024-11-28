@@ -9,21 +9,21 @@ public interface IPropertyAccessor
 
 public interface IExecutionContext : IPropertyAccessor
 {
-    object GetLambdaContext();
+    IExecutionContext SetFilterContext(object item);
 }
 
 public class ExecutionContext : IExecutionContext
 {
-
+    public object? FilterContext { get; init; }
     public required object Document { get; init; }
-    public object GetLambdaContext()
-    {
-        throw new NotImplementedException();
-    }
 
     public object? GetPropertyValue(string name) => name switch
     {
         "Document" => Document,
+        _ when FilterContext is not null => ObjAlgebra.GetPropertyValue(FilterContext, name),
         _ => throw new Exception($"Property {name} not found")
     };
+
+    public IExecutionContext SetFilterContext(object item)
+        => new ExecutionContext { Document = Document, FilterContext = item };
 }

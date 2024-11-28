@@ -2,6 +2,19 @@
 
 public static class ObjAlgebra
 {
+    public static object? Filter(IExecutionContext executionCtx, object collection, Func<IExecutionContext, bool> predicate)
+    {
+        var col = (IEnumerable<object>)collection;
+        foreach (var item in col)
+        {
+            if (predicate(executionCtx.SetFilterContext(item)))
+            {
+                return item;
+            }
+        }
+        return null;
+    }
+
     public static object IfThenElse(object condition, object then, object @else) =>
          TryChangeType(condition, typeof(bool)) switch
          {

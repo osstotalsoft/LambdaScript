@@ -26,8 +26,9 @@ public class CompilationContext
 
 public class Compiler
 {
-    private static ParameterExpression evaluationContext = Expression.Parameter(typeof(IExecutionContext), "ctx");
+    private static ParameterExpression executionContext = Expression.Parameter(typeof(IExecutionContext), "ctx");
     private static MethodInfo getPropertyValue = typeof(ObjAlgebra).GetMethod(nameof(ObjAlgebra.GetPropertyValue), BindingFlags.Static | BindingFlags.Public)!;
+    private static MethodInfo filter = typeof(ObjAlgebra).GetMethod(nameof(ObjAlgebra.Filter), BindingFlags.Static | BindingFlags.Public)!;
     private static MethodInfo coerce = typeof(ObjAlgebra).GetMethod(nameof(ObjAlgebra.Coerce), BindingFlags.Static | BindingFlags.Public)!;
     private static MethodInfo eq = typeof(ObjAlgebra).GetMethod(nameof(ObjAlgebra.Eq), BindingFlags.Static | BindingFlags.Public)!;
     private static MethodInfo notEq = typeof(ObjAlgebra).GetMethod(nameof(ObjAlgebra.NotEq), BindingFlags.Static | BindingFlags.Public)!;
@@ -45,7 +46,7 @@ public class Compiler
     private static Expression From(LambdaExpr predicate, CompilationContext cc) => predicate switch
     {
         LambdaExpr.Identifier { Id: var identifier } when identifier.StartsWith("@") => cc.GetVariable(identifier),
-        LambdaExpr.Identifier { Id: var identifier } => Expression.Call(null, getPropertyValue, evaluationContext, Expression.Constant(identifier)),
+        LambdaExpr.Identifier { Id: var identifier } => Expression.Call(null, getPropertyValue, executionContext, Expression.Constant(identifier)),
         LambdaExpr.String { S: var s } => Expression.Constant(s, typeof(object)),
         LambdaExpr.Number { N: var n } => Expression.Constant(n, typeof(object)),
         LambdaExpr.UnaryOp { Op: var (op, x) } => op switch
@@ -72,27 +73,34 @@ public class Compiler
         LambdaExpr.PropertyAccessor { Expr: var expr, PropertyName: var propertyName }
             => Expression.Call(null, getPropertyValue, From(expr, cc), Expression.Constant(propertyName)),
 
+        LambdaExpr.CollectionFilter { CololectionExpr: var collection, Predicate: var pred }
+            => Expression.Call(null, filter, executionContext, From(collection, cc), FromPredicate(pred, cc)),
+
         var e => throw new Exception($"Unknown expression of type {e.GetType()}")
     };
 
-    private static Expression FromStatement(LambdaStatement statement, CompilationContext cc)
+    private static Expression FromPredicate(LambdaExpr predicate, CompilationContext cc)
     {
-        return statement switch
-        {
-            LambdaStatement.Block { Item: var statements } 
-                => Expression.Block(statements.Select(s => FromStatement(s, cc))),
-            LambdaStatement.Assign { Variable: var variableName, Expr: var exp } 
-                => Expression.Assign(cc.GetVariable(variableName), From(exp, cc)),
-            LambdaStatement.If { Condition: var condition, Then: var thenBranch, Else: var elseBranch } =>
-                Expression.Condition(
-                    Expression.Convert(From(condition, cc), typeof(bool)),
-                    FromStatement(thenBranch, cc),
-                    elseBranch == null ? Expression.Empty() : FromStatement(elseBranch.Value, cc)
-                ),
-            LambdaStatement.Return { Item: var exp } => Expression.Return(cc.GetReturnTarget(), From(exp, cc), typeof(object)),
-            _ => throw new Exception($"Unknown statement of type {statement}")
-        };
+        var bodyExpr = Expression.Convert(From(predicate, cc), typeof(bool));
+        var expr = Expression.Lambda<Func<IExecutionContext, bool>>(bodyExpr, executionContext);
+        return expr;
     }
+
+    private static Expression FromStatement(LambdaStatement statement, CompilationContext cc) => statement switch
+    {
+        LambdaStatement.Block { Item: var statements } 
+            => Expression.Block(statements.Select(s => FromStatement(s, cc))),
+        LambdaStatement.Assign { Variable: var variableName, Expr: var exp } 
+            => Expression.Assign(cc.GetVariable(variableName), From(exp, cc)),
+        LambdaStatement.If { Condition: var condition, Then: var thenBranch, Else: var elseBranch } =>
+            Expression.Condition(
+                Expression.Convert(From(condition, cc), typeof(bool)),
+                FromStatement(thenBranch, cc),
+                elseBranch == null ? Expression.Empty() : FromStatement(elseBranch.Value, cc)
+            ),
+        LambdaStatement.Return { Item: var exp } => Expression.Return(cc.GetReturnTarget(), From(exp, cc), typeof(object)),
+        _ => throw new Exception($"Unknown statement of type {statement}")
+    };
 
 
     private static Expression FromScript(Parser.LambdaScript script, CompilationContext cc)
@@ -114,7 +122,7 @@ public class Compiler
             Expression.Call(null, coerce, FromScript(script, cc), Expression.Constant(typeof(TResult))),
             typeof(TResult));
 
-        var expr = Expression.Lambda<Func<IExecutionContext, TResult>>(bodyExpr, evaluationContext);
+        var expr = Expression.Lambda<Func<IExecutionContext, TResult>>(bodyExpr, executionContext);
         var fn = expr.Compile();
         return fn;
     }

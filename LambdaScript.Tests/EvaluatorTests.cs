@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using LambdaScript.Evaluator;
+using System.Xml.Linq;
 
 namespace LambdaScript.Tests;
 
@@ -106,6 +107,18 @@ public class EvaluatorTests
         var ctx = new Evaluator.ExecutionContext { Document = new { } };
         var res = new LambdaEvaluator().Evaluate<int>(script, ctx);
         res.Should().Be(1);
+    }
+
+    [Fact]
+    public void Evaluate_Filter()
+    {
+        var document = new
+        {
+            Details = new[] { new{ Name = "John", Age = 18 }, new { Name = "Doe", Age = 20 } }
+        };
+        var ctx = new Evaluator.ExecutionContext { Document = document };
+        var res = new LambdaEvaluator().Evaluate<int>("""Document.Details(Name == "Doe").Age""", ctx);
+        res.Should().Be(document.Details[1].Age);
     }
 
     //[Fact]

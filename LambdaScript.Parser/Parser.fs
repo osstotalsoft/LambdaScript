@@ -195,8 +195,8 @@ module Internal =
         parse {
             do! ignore_ws_str "if"
             let! condition = betweenParens lambdaExprParser .>> spaces
-            let! thenBranch = lambdaStatementParser .>> many statementSeparator
-            let! x = opt (attempt(spaces .>> pstring "else"))
+            let! thenBranch = lambdaStatementParser .>> justSpaces
+            let! x = opt (attempt(many statementSeparator >>. pstring "else"))
             let! elseBranch = x |> function
                 | Some _ -> spaces >>. lambdaStatementParser |>> Some
                 | None -> parse { return None }
@@ -205,7 +205,7 @@ module Internal =
 
     let returnParser = 
         parse {
-            do! ignore_ws_str "return"
+            do! ignore_ws_str "return" >>. justSpaces
             let! expr = lambdaExprParser
             return Return expr
         } <?> "return statement"
@@ -227,8 +227,8 @@ module Internal =
 
 open Internal
 
-let parseLambdaScript s = 
-    let result = run lambdaScriptParser s
+let parseLambdaScript (s:string) = 
+    let result = run lambdaScriptParser (s.Replace( "}","};"))
     match result with
         | Success(s,_,_) -> s |> Result.Ok
         | Failure(f, _, _) -> f |> Result.Error

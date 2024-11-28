@@ -23,7 +23,7 @@ namespace LambdaScript.Tests
             {
                 Parser.LambdaScript.StatementList { Item: var statements } => statements.ToList() switch
                 {
-                [LambdaStatement.If { Else: var elseB}] when FSharpOption<LambdaStatement>.get_IsSome(elseB) => true,
+                [LambdaStatement.If { Else: var elseB }] when FSharpOption<LambdaStatement>.get_IsSome(elseB) => true,
                     _ => false
                 },
                 _ => false
@@ -45,13 +45,79 @@ namespace LambdaScript.Tests
             {
                 Parser.LambdaScript.StatementList { Item: var statements } => statements.ToList() switch
                 {
-                [LambdaStatement.If { Else: var elseB }] when FSharpOption<LambdaStatement>.get_IsSome(elseB) => true,
+                    [LambdaStatement.If { Else: var elseB }] when FSharpOption<LambdaStatement>.get_IsSome(elseB) => true,
                     _ => false
                 },
                 _ => false
             };
 
             elseBranch.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Parse_IfThenElse_3()
+        {
+            var script =
+            """
+            if (@a == 2) { SET(@v, 5) }; return @a >= @b;
+            """;
+
+            var r = Parser.parseLambdaScript(script);
+            var statementsOk = r.IsOk && r.ResultValue switch
+            {
+                Parser.LambdaScript.StatementList { Item: var statements } => statements.ToList() switch
+                {
+                    [LambdaStatement.If _, LambdaStatement.Return] => true,
+                    _ => false
+                },
+                _ => false
+            };
+
+            statementsOk.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Parse_IfThenElse_4()
+        {
+            var script =
+            """
+            if (@a == 2) { SET(@v, 5) } return @a >= @b;
+            """;
+
+            var r = Parser.parseLambdaScript(script);
+            var statementsOk = r.IsOk && r.ResultValue switch
+            {
+                Parser.LambdaScript.StatementList { Item: var statements } => statements.ToList() switch
+                {
+                [LambdaStatement.If _, LambdaStatement.Return] => true,
+                    _ => false
+                },
+                _ => false
+            };
+
+            statementsOk.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Parse_IfThenElse_5()
+        {
+            var script =
+            """
+            if (@a == 2) { SET(@v, 5); } return @a >= @b
+            """;
+
+            var r = Parser.parseLambdaScript(script);
+            var statementsOk = r.IsOk && r.ResultValue switch
+            {
+                Parser.LambdaScript.StatementList { Item: var statements } => statements.ToList() switch
+                {
+                [LambdaStatement.If _, LambdaStatement.Return] => true,
+                    _ => false
+                },
+                _ => false
+            };
+
+            statementsOk.Should().BeTrue();
         }
 
         [Fact]
